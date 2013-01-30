@@ -1,0 +1,47 @@
+#!/usr/bin/php
+<?php
+
+$in_filename = $argv[1];
+$out_filename = $argv[2];
+
+if (!$in_filename || !$out_filename) {
+    print "Usage: ./php2pdf <filename.php> <outfile.pdf>\n";
+    exit(1);
+}
+
+ob_start();
+require_once($in_filename);
+$content = ob_get_clean();
+
+require_once(dirname(__FILE__).'/../html2pdf.class.php');
+
+try {
+    $orientation = 'P'; // portrait
+    $page_size = 'A4';
+    $display_mode = 'fullpage';
+
+    // First pass (calculating the number of pages)
+    $html2pdf = new HTML2PDF($orientation, $page_size, 'en', true, 'UTF-8', 0);
+    $html2pdf->pdf->SetDisplayMode($display_mode);
+    $html2pdf->_isCalculationPass = true;
+    $html2pdf->writeHTML($content);
+
+    $firstPages = $html2pdf->_firstPageInSet;
+    $maxPage = $html2pdf->_maxPage;
+
+    // Second pass
+    $html2pdf = new HTML2PDF($orientation, $page_size, 'en', true, 'UTF-8', 0);
+    $html2pdf->pdf->SetDisplayMode($display_mode);
+
+    $html2pdf->_isCalculationPass = false;
+
+    $html2pdf->_firstPageInSet = $firstPages;
+    $html2pdf->_maxPage = $maxPage;
+
+    $html2pdf->writeHTML($content);
+    $html2pdf->Output($out_filename);
+
+} catch (HTML2PDF_exception $e) {
+    echo $e;
+    exit(1);
+}
