@@ -9,6 +9,10 @@
  * @version 4.03
  */
 
+function stderr($message) {
+    file_put_contents('php://stderr', $message, FILE_APPEND);
+}
+
 if (!defined('__CLASS_HTML2PDF__')) {
 
     define('__CLASS_HTML2PDF__', '4.03');
@@ -129,6 +133,9 @@ if (!defined('__CLASS_HTML2PDF__')) {
             // init the page number
             $this->_page         = 0;
             $this->_firstPage    = true;
+
+            $this->_firstPageInSet = array();
+            $this->_isCalculationPass = true;
 
             // save the parameters
             $this->_orientation  = $orientation;
@@ -558,6 +565,16 @@ if (!defined('__CLASS_HTML2PDF__')) {
 
             $this->_page++;
 
+            if (!$this->_isSubPart) {
+                stderr("Page = " . $this->_page . "\n");
+                if ($this->_isCalculationPass) {
+                    if ($resetPageNumber || $this->_page == 1) {
+                        $this->_firstPageInSet []= $this->_page;
+                    }
+                    $this->_maxPage = $this->_page;
+                }
+            }
+            
             if (!$this->_subPart && !$this->_isSubPart) {
                 if (is_array($this->_background)) {
                     if (isset($this->_background['color']) && $this->_background['color']) {
@@ -587,15 +604,24 @@ if (!defined('__CLASS_HTML2PDF__')) {
          */
         protected function _setMargins()
         {
-            // prepare the margins
-            $this->_margeLeft   = $this->_defaultLeft   + (isset($this->_background['left'])   ? $this->_background['left']   : 0);
-            $this->_margeRight  = $this->_defaultRight  + (isset($this->_background['right'])  ? $this->_background['right']  : 0);
-            $this->_margeTop    = $this->_defaultTop    + (isset($this->_background['top'])    ? $this->_background['top']    : 0);
-            $this->_margeBottom = $this->_defaultBottom + (isset($this->_background['bottom']) ? $this->_background['bottom'] : 0);
+            if (!$this->_isSubPart) {
+                $first = in_array($this->_page, $this->_firstPageInSet);
+                //stderr("_setMargins(" . $first . ") (page = " . $this->_page . ")\n");
 
-            // set the PDF margins
-            $this->pdf->SetMargins($this->_margeLeft, $this->_margeTop, $this->_margeRight);
-            $this->pdf->SetAutoPageBreak(false, $this->_margeBottom);
+                // optimized to calculate/set page margins only once per page
+
+                $suffix = $first ? '-first' : '';
+
+                // prepare the margins
+                $this->_margeLeft   = $this->_defaultLeft   + (isset($this->_background['left'.$suffix])   ? $this->_background['left'.$suffix]   : 0);
+                $this->_margeRight  = $this->_defaultRight  + (isset($this->_background['right'.$suffix])  ? $this->_background['right'.$suffix]  : 0);
+                $this->_margeTop    = $this->_defaultTop    + (isset($this->_background['top'.$suffix])    ? $this->_background['top'.$suffix]    : 0);
+                $this->_margeBottom = $this->_defaultBottom + (isset($this->_background['bottom'.$suffix]) ? $this->_background['bottom'.$suffix] : 0);
+
+                // set the PDF margins
+                $this->pdf->SetMargins($this->_margeLeft, $this->_margeTop, $this->_margeRight);
+                $this->pdf->SetAutoPageBreak(false, $this->_margeBottom);
+            }
 
             // set the float Margins
             $this->_pageMarges = array();
@@ -806,13 +832,22 @@ if (!defined('__CLASS_HTML2PDF__')) {
          */
         protected function _setPageHeader()
         {
-            if (!count($this->_subHEADER)) return false;
+            $first = in_array($this->_page, $this->_firstPageInSet);
+            //stderr("_setPageHeader(" . $first . ")\n");
+
+            // if there's no 'first' header defined, fallback to normal header
+            if ($first && !count($this->{'_subFIRST_HEADER'})) {
+                $first = false;
+            }
+
+            $prop = $first ? '_subFIRST_HEADER' : '_subHEADER';
+            if (!count($this->{$prop})) return false;
 
             $oldParsePos = $this->_parsePos;
             $oldParseCode = $this->parsingHtml->code;
 
             $this->_parsePos = 0;
-            $this->parsingHtml->code = $this->_subHEADER;
+            $this->parsingHtml->code = $this->{$prop};
             $this->_makeHTMLcode();
 
             $this->_parsePos = $oldParsePos;
@@ -826,13 +861,22 @@ if (!defined('__CLASS_HTML2PDF__')) {
          */
         protected function _setPageFooter()
         {
-            if (!count($this->_subFOOTER)) return false;
+            $last = (!$this->_isCalculationPass && $this->_page == $this->_maxPage);
+            //stderr("_setPageFooter(" . $last . ")\n");
+
+            // if there's no 'last' footer defined, fallback to normal footer
+            if ($last && !count($this->{'_subLAST_FOOTER'})) {
+                $last = false;
+            }
+
+            $prop = $last ? '_subLAST_FOOTER' : '_subFOOTER';
+            if (!count($this->{$prop})) return false;
 
             $oldParsePos = $this->_parsePos;
             $oldParseCode = $this->parsingHtml->code;
 
             $this->_parsePos = 0;
-            $this->parsingHtml->code = $this->_subFOOTER;
+            $this->parsingHtml->code = $this->{$prop};
             $this->_isInFooter = true;
             $this->_makeHTMLcode();
             $this->_isInFooter = false;
@@ -2242,6 +2286,8 @@ if (!defined('__CLASS_HTML2PDF__')) {
             if ($newPageSet) {
                 $this->_subHEADER = array();
                 $this->_subFOOTER = array();
+                $this->_subFIRST_HEADER = array();
+                $this->_subLAST_FOOTER = array();
 
                 // orientation
                 $orientation = '';
@@ -2308,17 +2354,32 @@ if (!defined('__CLASS_HTML2PDF__')) {
                 $background['left']   = isset($param['backleft'])   ? $param['backleft']   : '0';
                 $background['right']  = isset($param['backright'])  ? $param['backright']  : '0';
 
+                $background['top-first']    = isset($param['backtopfirst'])    ? $param['backtopfirst']    : $background['top'];
+                $background['bottom-first'] = isset($param['backbottomfirst']) ? $param['backbottomfirst'] : $background['bottom'];
+                $background['left-first']   = isset($param['backleftfirst'])   ? $param['backleftfirst']   : $background['left'];
+                $background['right-first']  = isset($param['backrightfirst'])  ? $param['backrightfirst']  : $background['right'];
+
                 // if no unit => mm
                 if (preg_match('/^([0-9]*)$/isU', $background['top']))    $background['top']    .= 'mm';
                 if (preg_match('/^([0-9]*)$/isU', $background['bottom'])) $background['bottom'] .= 'mm';
                 if (preg_match('/^([0-9]*)$/isU', $background['left']))   $background['left']   .= 'mm';
                 if (preg_match('/^([0-9]*)$/isU', $background['right']))  $background['right']  .= 'mm';
 
+                if (preg_match('/^([0-9]*)$/isU', $background['top-first']))    $background['top-first']    .= 'mm';
+                if (preg_match('/^([0-9]*)$/isU', $background['bottom-first'])) $background['bottom-first'] .= 'mm';
+                if (preg_match('/^([0-9]*)$/isU', $background['left-first']))   $background['left-first']   .= 'mm';
+                if (preg_match('/^([0-9]*)$/isU', $background['right-first']))  $background['right-first']  .= 'mm';
+
                 // convert to mm
                 $background['top']    = $this->parsingCss->ConvertToMM($background['top'], $this->pdf->getH());
                 $background['bottom'] = $this->parsingCss->ConvertToMM($background['bottom'], $this->pdf->getH());
                 $background['left']   = $this->parsingCss->ConvertToMM($background['left'], $this->pdf->getW());
                 $background['right']  = $this->parsingCss->ConvertToMM($background['right'], $this->pdf->getW());
+
+                $background['top-first']    = $this->parsingCss->ConvertToMM($background['top-first'], $this->pdf->getH());
+                $background['bottom-first'] = $this->parsingCss->ConvertToMM($background['bottom-first'], $this->pdf->getH());
+                $background['left-first']   = $this->parsingCss->ConvertToMM($background['left-first'], $this->pdf->getW());
+                $background['right-first']  = $this->parsingCss->ConvertToMM($background['right-first'], $this->pdf->getW());
 
                 // get the background color
                 $res = false;
@@ -2393,11 +2454,15 @@ if (!defined('__CLASS_HTML2PDF__')) {
         {
             if ($this->_isForOneLine) return false;
 
-            $this->_subHEADER = array();
+            $first = $param['type'] == 'first';
+            //stderr("_tag_open_PAGE_HEADER, first = " . $first . "\n");
+            $prop = $first ? '_subFIRST_HEADER' : '_subHEADER';
+
+            $this->{$prop} = array();
             for ($this->_parsePos; $this->_parsePos<count($this->parsingHtml->code); $this->_parsePos++) {
                 $action = $this->parsingHtml->code[$this->_parsePos];
                 if ($action['name']=='page_header') $action['name']='page_header_sub';
-                $this->_subHEADER[] = $action;
+                $this->{$prop} []= $action;
                 if (strtolower($action['name'])=='page_header_sub' && $action['close']) break;
             }
 
@@ -2417,11 +2482,15 @@ if (!defined('__CLASS_HTML2PDF__')) {
         {
             if ($this->_isForOneLine) return false;
 
-            $this->_subFOOTER = array();
+            $last = $param['type'] == 'last';
+            //stderr("_tag_open_PAGE_FOOTER, last = " . $last . "\n");
+            $prop = $last ? '_subLAST_FOOTER' : '_subFOOTER';
+
+            $this->{$prop} = array();
             for ($this->_parsePos; $this->_parsePos<count($this->parsingHtml->code); $this->_parsePos++) {
                 $action = $this->parsingHtml->code[$this->_parsePos];
                 if ($action['name']=='page_footer') $action['name']='page_footer_sub';
-                $this->_subFOOTER[] = $action;
+                $this->{$prop} []= $action;
                 if (strtolower($action['name'])=='page_footer_sub' && $action['close']) break;
             }
 
