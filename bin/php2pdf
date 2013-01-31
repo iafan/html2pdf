@@ -39,7 +39,7 @@ try {
     $html2pdf->_maxPage = $maxPage;
 
     $html2pdf->writeHTML($content);
-    $html2pdf->Output($out_filename);
+    $html2pdf->Output($out_filename, 'F');
 
 } catch (HTML2PDF_exception $e) {
     echo $e;
