@@ -3454,18 +3454,30 @@ if (!class_exists('TCPDF', false)) {
 		}
 
 		/**
-		 * Fill the list of available fonts ($this->fontlist).
+		 * Fill the list of available fonts from a specified folder.
 		 * @access protected
-		 * @since 4.0.013 (2008-07-28)
+		 * @since 2013-01-31
 		 */
-		protected function getFontsList() {
-			$fontsdir = opendir($this->_getfontpath());
+		protected function getFontsListFromDir($path) {
+			$fontsdir = opendir($path);
 			while (($file = readdir($fontsdir)) !== false) {
 				if (substr($file, -4) == '.php') {
 					array_push($this->fontlist, strtolower(basename($file, '.php')));
 				}
 			}
 			closedir($fontsdir);
+		}
+
+		/**
+		 * Fill the list of available fonts ($this->fontlist).
+		 * @access protected
+		 * @since 4.0.013 (2008-07-28)
+		 */
+		protected function getFontsList() {
+			$this->getFontsListFromDir($this->_getfontpath());
+			if ($this->_getfontpath() != $this->_getdefaultfontpath()) {
+				$this->getFontsListFromDir($this->_getdefaultfontpath());
+			}
 		}
 
 		/**
@@ -3557,12 +3569,16 @@ if (!class_exists('TCPDF', false)) {
 					$fontfile = $fontdir.$fontfile1;
 				} elseif (file_exists($this->_getfontpath().$fontfile1)) {
 					$fontfile = $this->_getfontpath().$fontfile1;
+				} elseif (file_exists($this->_getdefaultfontpath().$fontfile1)) {
+					$fontfile = $this->_getdefaultfontpath().$fontfile1;
 				} elseif (file_exists($fontfile1)) {
 					$fontfile = $fontfile1;
 				} elseif (($fontdir !== false) AND file_exists($fontdir.$fontfile2)) {
 					$fontfile = $fontdir.$fontfile2;
 				} elseif (file_exists($this->_getfontpath().$fontfile2)) {
 					$fontfile = $this->_getfontpath().$fontfile2;
+				} elseif (file_exists($this->_getdefaultfontpath().$fontfile2)) {
+					$fontfile = $this->_getdefaultfontpath().$fontfile2;
 				} else {
 					$fontfile = $fontfile2;
 				}
@@ -6272,9 +6288,18 @@ if (!class_exists('TCPDF', false)) {
 		 * @return string
 		 * @access protected
 		 */
+		protected function _getdefaultfontpath() {
+			return dirname(__FILE__).'/fonts/';
+		}
+
+		/**
+		 * Return fonts path
+		 * @return string
+		 * @access protected
+		 */
 		protected function _getfontpath() {
 			if (!defined('K_PATH_FONTS') AND is_dir(dirname(__FILE__).'/fonts')) {
-				define('K_PATH_FONTS', dirname(__FILE__).'/fonts/');
+				define('K_PATH_FONTS', $this->_getdefaultfontpath());
 			}
 			return defined('K_PATH_FONTS') ? K_PATH_FONTS : '';
 		}
@@ -7110,6 +7135,8 @@ if (!class_exists('TCPDF', false)) {
 					$fontfile = $fontdir.$file;
 				} elseif (file_exists($this->_getfontpath().$file)) {
 					$fontfile = $this->_getfontpath().$file;
+				} elseif (file_exists($this->_getdefaultfontpath().$file)) {
+					$fontfile = $this->_getdefaultfontpath().$file;
 				} elseif (file_exists($file)) {
 					$fontfile = $file;
 				}
@@ -7389,6 +7416,8 @@ if (!class_exists('TCPDF', false)) {
 					$fontfile = $fontdir.$ctgfile;
 				} elseif (file_exists($this->_getfontpath().$ctgfile)) {
 					$fontfile = $this->_getfontpath().$ctgfile;
+				} elseif (file_exists($this->_getdefaultfontpath().$ctgfile)) {
+					$fontfile = $this->_getdefaultfontpath().$ctgfile;
 				} elseif (file_exists($ctgfile)) {
 					$fontfile = $ctgfile;
 				}
