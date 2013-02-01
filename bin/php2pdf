@@ -12,6 +12,7 @@ if (!$in_filename || !$out_filename) {
 ob_start();
 require_once($in_filename);
 $content = ob_get_clean();
+print "Loaded $in_filename\n";
 
 require_once(dirname(__FILE__).'/../html2pdf.class.php');
 
@@ -20,7 +21,14 @@ try {
     $page_size = 'A4';
     $display_mode = 'fullpage';
 
+    $dir = dirname($in_filename);
+    if (!chdir($dir)) {
+        print "Failed to change current directory to '$dir'\n";
+        exit(2);
+    }
+
     // First pass (calculating the number of pages)
+    print "Rendering (pass 1 of 2)...\n";
     $html2pdf = new HTML2PDF($orientation, $page_size, 'en', true, 'UTF-8', 0);
     $html2pdf->pdf->SetDisplayMode($display_mode);
     $html2pdf->_isCalculationPass = true;
@@ -30,6 +38,7 @@ try {
     $maxPage = $html2pdf->_maxPage;
 
     // Second pass
+    print "Rendering (pass 2 of 2)...\n";
     $html2pdf = new HTML2PDF($orientation, $page_size, 'en', true, 'UTF-8', 0);
     $html2pdf->pdf->SetDisplayMode($display_mode);
 
@@ -40,8 +49,9 @@ try {
 
     $html2pdf->writeHTML($content);
     $html2pdf->Output($out_filename, 'F');
+    print "Saved PDF to $out_filename\n";
 
 } catch (HTML2PDF_exception $e) {
     echo $e;
-    exit(1);
+    exit(3);
 }

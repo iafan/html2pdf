@@ -9,10 +9,6 @@
  * @version 4.03
  */
 
-function stderr($message) {
-    file_put_contents('php://stderr', $message, FILE_APPEND);
-}
-
 if (!defined('__CLASS_HTML2PDF__')) {
 
     define('__CLASS_HTML2PDF__', '4.03');
@@ -566,7 +562,6 @@ if (!defined('__CLASS_HTML2PDF__')) {
             $this->_page++;
 
             if (!$this->_isSubPart) {
-                stderr("Page = " . $this->_page . "\n");
                 if ($this->_isCalculationPass) {
                     if ($resetPageNumber || $this->_page == 1) {
                         $this->_firstPageInSet []= $this->_page;
@@ -606,7 +601,6 @@ if (!defined('__CLASS_HTML2PDF__')) {
         {
             if (!$this->_isSubPart) {
                 $first = in_array($this->_page, $this->_firstPageInSet);
-                //stderr("_setMargins(" . $first . ") (page = " . $this->_page . ")\n");
 
                 // optimized to calculate/set page margins only once per page
 
@@ -833,7 +827,6 @@ if (!defined('__CLASS_HTML2PDF__')) {
         protected function _setPageHeader()
         {
             $first = in_array($this->_page, $this->_firstPageInSet);
-            //stderr("_setPageHeader(" . $first . ")\n");
 
             // if there's no 'first' header defined, fallback to normal header
             if ($first && !count($this->{'_subFIRST_HEADER'})) {
@@ -862,7 +855,6 @@ if (!defined('__CLASS_HTML2PDF__')) {
         protected function _setPageFooter()
         {
             $last = (!$this->_isCalculationPass && $this->_page == $this->_maxPage);
-            //stderr("_setPageFooter(" . $last . ")\n");
 
             // if there's no 'last' footer defined, fallback to normal footer
             if ($last && !count($this->{'_subLAST_FOOTER'})) {
@@ -2455,7 +2447,6 @@ if (!defined('__CLASS_HTML2PDF__')) {
             if ($this->_isForOneLine) return false;
 
             $first = $param['type'] == 'first';
-            //stderr("_tag_open_PAGE_HEADER, first = " . $first . "\n");
             $prop = $first ? '_subFIRST_HEADER' : '_subHEADER';
 
             $this->{$prop} = array();
@@ -2483,7 +2474,6 @@ if (!defined('__CLASS_HTML2PDF__')) {
             if ($this->_isForOneLine) return false;
 
             $last = $param['type'] == 'last';
-            //stderr("_tag_open_PAGE_FOOTER, last = " . $last . "\n");
             $prop = $last ? '_subLAST_FOOTER' : '_subFOOTER';
 
             $this->{$prop} = array();
