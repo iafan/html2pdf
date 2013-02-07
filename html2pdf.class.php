@@ -6523,6 +6523,54 @@ if (!defined('__CLASS_HTML2PDF__')) {
         }
 
         /**
+         * tag : DT
+         * mode : OPEN
+         *
+         * @param  array $param
+         * @return boolean
+         */
+        protected function _tag_open_DT($param)
+        {
+            return $this->_tag_open_B($param, 'dd');
+        }
+
+        /**
+         * tag : DT
+         * mode : CLOSE
+         *
+         * @param  array $param
+         * @return boolean
+         */
+        protected function _tag_close_DT($param)
+        {
+            return $this->_tag_close_B($param);
+        }
+
+        /**
+         * tag : DD
+         * mode : OPEN
+         *
+         * @param  array $param
+         * @return boolean
+         */
+        protected function _tag_open_DD($param)
+        {
+            return $this->_tag_open_SPAN($param, 'dd');
+        }
+
+        /**
+         * tag : DD
+         * mode : CLOSE
+         *
+         * @param  array $param
+         * @return boolean
+         */
+        protected function _tag_close_DD($param)
+        {
+            return $this->_tag_close_SPAN($param);
+        }
+
+        /**
          * new page for the automatic Index, does not use thie method. Only HTML2PDF_myPdf could use it !!!!
          *
          * @param  &int $page
