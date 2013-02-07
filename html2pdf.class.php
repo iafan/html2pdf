@@ -1156,7 +1156,7 @@ if (!defined('__CLASS_HTML2PDF__')) {
                     return array('helvetica', false, ($up ? strtoupper($str) : $str).'.');
 
                 case 'decimal':
-                    return array('helvetica', false, $nb.'.');
+                    return array($this->parsingCss->value['font-family'], false, $nb.'.');
 
                 case 'square':
                     return array('zapfdingbats', true, chr(110));
@@ -4528,14 +4528,18 @@ if (!defined('__CLASS_HTML2PDF__')) {
             $paramPUCE = $param;
 
             $inf = $this->_listeGetLi();
-            if ($inf[0]) {
+            // $inf[0] = font family (if not specified, then bullet is rendered using an image)
+            // $inf[1] = 'small' flag (if the bullet should be rendered with a smaller font)
+            // $inf[2] = text (bullet char)
+
+            if ($inf[0]) { // text
                 $paramPUCE['style']['font-family']     = $inf[0];
                 $paramPUCE['style']['text-align']      = 'li_right';
                 $paramPUCE['style']['vertical-align']  = 'top';
                 $paramPUCE['style']['width']           = $this->_listeGetWidth();
                 $paramPUCE['style']['padding-right']   = $this->_listeGetPadding();
-                $paramPUCE['txt'] = $inf[2];
-            } else {
+                $paramPUCE['txt'] = $inf[2].' '; // added space for visual break between bullet and text
+            } else { // image
                 $paramPUCE['style']['text-align']      = 'li_right';
                 $paramPUCE['style']['vertical-align']  = 'top';
                 $paramPUCE['style']['width']           = $this->_listeGetWidth();
@@ -4550,8 +4554,8 @@ if (!defined('__CLASS_HTML2PDF__')) {
 
             // if small LI
             if ($inf[1]) {
-                $this->parsingCss->value['mini-decal']+= $this->parsingCss->value['mini-size']*0.045;
-                $this->parsingCss->value['mini-size'] *= 0.75;
+                //$this->parsingCss->value['mini-decal'] += $this->parsingCss->value['mini-size'] * 0.035;
+                $this->parsingCss->value['mini-size'] *= 0.7;
             }
 
             // if we are in a sub html => prepare. Else : display
@@ -4561,11 +4565,11 @@ if (!defined('__CLASS_HTML2PDF__')) {
                 $tmpLst1 = $this->parsingHtml->code[$tmpPos+1];
                 $tmpLst2 = $this->parsingHtml->code[$tmpPos+2];
                 $this->parsingHtml->code[$tmpPos+1] = array();
-                $this->parsingHtml->code[$tmpPos+1]['name']    = (isset($paramPUCE['src'])) ? 'img' : 'write';
+                $this->parsingHtml->code[$tmpPos+1]['name']     = (isset($paramPUCE['src'])) ? 'img' : 'write';
                 $this->parsingHtml->code[$tmpPos+1]['param']    = $paramPUCE; unset($this->parsingHtml->code[$tmpPos+1]['param']['style']['width']);
                 $this->parsingHtml->code[$tmpPos+1]['close']    = 0;
                 $this->parsingHtml->code[$tmpPos+2] = array();
-                $this->parsingHtml->code[$tmpPos+2]['name']    = 'li';
+                $this->parsingHtml->code[$tmpPos+2]['name']     = 'li';
                 $this->parsingHtml->code[$tmpPos+2]['param']    = $paramPUCE;
                 $this->parsingHtml->code[$tmpPos+2]['close']    = 1;
                 $this->_tag_open_TD($paramPUCE, 'li_sub');
