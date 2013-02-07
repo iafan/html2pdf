@@ -21,6 +21,8 @@ try {
     $page_size = 'A4';
     $display_mode = 'fullpage';
 
+    $initial_dir = getcwd();
+
     $dir = dirname($in_filename);
     if (!chdir($dir)) {
         print "Failed to change current directory to '$dir'\n";
@@ -48,6 +50,12 @@ try {
     $html2pdf->_maxPage = $maxPage;
 
     $html2pdf->writeHTML($content);
+
+    if (!chdir($initial_dir)) {
+        print "Failed to change current directory to '$initial_dir'\n";
+        exit(2);
+    }
+
     $html2pdf->Output($out_filename, 'F');
     print "Saved PDF to $out_filename\n";
 
