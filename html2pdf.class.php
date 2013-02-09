@@ -130,8 +130,9 @@ if (!defined('__CLASS_HTML2PDF__')) {
             $this->_page         = 0;
             $this->_firstPage    = true;
 
-            $this->_firstPageInSet = array();
+            $this->_firstPageInSet    = array();
             $this->_isCalculationPass = true;
+            $this->_rootPathForURLs   = '';
 
             // save the parameters
             $this->_orientation  = $orientation;
@@ -987,6 +988,10 @@ if (!defined('__CLASS_HTML2PDF__')) {
             HTML2PDF::$_subobj->parsingCss->css            = &$this->parsingCss->css;
             HTML2PDF::$_subobj->parsingCss->cssKeys        = &$this->parsingCss->cssKeys;
 
+            // copy global parameters
+            HTML2PDF::$_subobj->_isCalculationPass = $this->_isCalculationPass;
+            HTML2PDF::$_subobj->_rootPathForURLs = $this->_rootPathForURLs;
+
             // clone font from the original PDF
             HTML2PDF::$_subobj->pdf->cloneFontFrom($this->pdf);
 
@@ -1344,6 +1349,11 @@ if (!defined('__CLASS_HTML2PDF__')) {
          */
         protected function _drawImage($src, $subLi=false)
         {
+            // for image URLs that start with forward slash, try
+            // to map them to a filesystem using the URL_ROOT parameter
+            if (strpos($src, '/') === 0) {
+                $src = $this->_rootPathForURLs.$src;
+            }
             // get the size of the image
             // WARNING : if URL, "allow_url_fopen" must turned to "on" in php.ini
             $infos=@getimagesize($src);
@@ -2473,7 +2483,7 @@ if (!defined('__CLASS_HTML2PDF__')) {
         {
             if ($this->_isForOneLine) return false;
 
-            $last = $param['type'] == 'last';
+            $last = isset($param['type']) && $param['type'] == 'last';
             $prop = $last ? '_subLAST_FOOTER' : '_subFOOTER';
 
             $this->{$prop} = array();

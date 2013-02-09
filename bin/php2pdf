@@ -1,11 +1,18 @@
 #!/usr/bin/php
 <?php
 
+$options = getopt('', array('root:'));
+
+while (strpos($argv[1], '--') === 0) {
+    unset($argv[1]);
+}
+$argv = array_values($argv);
+
 $in_filename = $argv[1];
 $out_filename = $argv[2];
 
 if (!$in_filename || !$out_filename) {
-    print "Usage: ./php2pdf <filename.php> <outfile.pdf>\n";
+    print "Usage: ./php2pdf [--root=/path/to/website/root] <filename.php> <outfile.pdf>\n";
     exit(1);
 }
 
@@ -34,6 +41,9 @@ try {
     $html2pdf = new HTML2PDF($orientation, $page_size, 'en', true, 'UTF-8', 0);
     $html2pdf->pdf->SetDisplayMode($display_mode);
     $html2pdf->_isCalculationPass = true;
+    if (isset($options['root'])) {
+        $html2pdf->_rootPathForURLs = $options['root'];
+    }
     $html2pdf->writeHTML($content);
 
     $firstPages = $html2pdf->_firstPageInSet;
@@ -45,6 +55,9 @@ try {
     $html2pdf->pdf->SetDisplayMode($display_mode);
 
     $html2pdf->_isCalculationPass = false;
+    if (isset($options['root'])) {
+        $html2pdf->_rootPathForURLs = $options['root'];
+    }
 
     $html2pdf->_firstPageInSet = $firstPages;
     $html2pdf->_maxPage = $maxPage;
